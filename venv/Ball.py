@@ -1,34 +1,38 @@
+# from Ball import Ball
+# from Ball import BALL_RADIUS
 import os, sys
 import pygame
 import pygame.gfxdraw
+from pygame import font
 import random
 import math
 from pygame.locals import *
+from TextInput import TextInput
+import pymunk
+import pymunk.pygame_util
 
-BALL_RADIUS = 23
+
 class Ball:
-    def __init__(self, num, col, striped, loc):
+    def __init__(self, num, col, striped):
+        self.radius = 23
+        self.mass = 5
         self.num = num
         self.col = col
         self.striped = striped
-        self.loc = loc
+        self.moment = pymunk.moment_for_circle(self.mass, 0, self.radius, (0,0))
+        self.body = pymunk.Body(self.mass, self.moment)
+        self.shape = pymunk.Circle(self.body, self.radius, (0, 0))
+        self.shape.friction = 50
 
-        self.angle = 0
-        self.vel = 0
+    def place(self, space, loc):
+        self.body.position = loc
+        space.add(self.body, self.shape)
+    def move(self, angle, power):
+        angle = math.radians(float(angle))
+        x = math.cos(angle)
+        y = math.sin(angle)
+        xPower = x*float(power)
+        yPower = y*float(power)
 
-    def display(self, screen):
-
-        if not self.striped:
-            atom_img = pygame.Surface((BALL_RADIUS, BALL_RADIUS), pygame.SRCALPHA)
-            pygame.gfxdraw.aacircle(atom_img, BALL_RADIUS//2, BALL_RADIUS//2, BALL_RADIUS//2, self.col)
-            pygame.gfxdraw.filled_circle(atom_img, BALL_RADIUS//2, BALL_RADIUS//2, BALL_RADIUS//2, self.col)
-        else:
-            atom_img = pygame.Surface((BALL_RADIUS, BALL_RADIUS), pygame.SRCALPHA)
-            pygame.gfxdraw.aacircle(atom_img, BALL_RADIUS // 2, BALL_RADIUS // 2, BALL_RADIUS // 2, (255, 255, 255))
-            pygame.gfxdraw.filled_circle(atom_img, BALL_RADIUS // 2, BALL_RADIUS // 2, BALL_RADIUS // 2, (255, 255, 255))
-            pygame.draw.rect(atom_img, self.col, (0, (BALL_RADIUS/2)-1, BALL_RADIUS*2, 4), 4)
-
-        myfont = pygame.font.SysFont('Impact', 15)
-        textsurface = myfont.render(str(self.num), False, (0, 0, 0))
-        atom_img.blit(textsurface, (4, 0))
-        screen.blit(atom_img, self.loc)
+        print("moving")
+        self.body.apply_impulse_at_local_point((xPower,yPower), (0,0))

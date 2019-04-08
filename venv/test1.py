@@ -9,6 +9,7 @@ import math
 import pymunk
 from pygame.locals import *
 from TextInput import TextInput
+import pymunk.pygame_util
 
 
 
@@ -53,16 +54,28 @@ class Board:
         screen=pygame.display.set_mode((1000, 400))
         pygame.display.set_caption('Billards')
 
-        background = pygame.Surface((800, 400))
-        background = background.convert()
-        background.fill((10, 108, 3))
+        space = pymunk.Space()
+        space.gravity = (0.0, -4.5)
+        draw_options = pymunk.pygame_util.DrawOptions(screen)
 
-        backgroundDuo = pygame.Surface((200, 400))
-        backgroundDuo = backgroundDuo.convert()
-        backgroundDuo.fill((255, 255, 255))
+        # background = pygame.Surface((800, 400))
+        # background = background.convert()
+        # background.fill((10, 108, 3))
 
-        screen.blit(background, (0, 0))
-        screen.blit(backgroundDuo, (800, 0))
+        backgroundMoment = pymunk.moment_for_box(0, (800, 400))
+        backgroundBody = pymunk.Body(0, backgroundMoment)
+        backgroundBody.position = (0,0)
+        background = pymunk.Poly(backgroundBody, [(0, 0), (10, 0), (10,10), (10, 0), (0,0)])
+        background.friction = 0.05
+        background.color = (10, 108, 3)#pygame.color.THECOLORS[GREEN]
+        space.add(backgroundBody, background)
+
+        # backgroundDuo = pygame.Surface((200, 400))
+        # backgroundDuo = backgroundDuo.convert()
+        # backgroundDuo.fill((255, 255, 255))
+
+        # screen.blit(background, (0, 0))
+        # screen.blit(backgroundDuo, (800, 0))
         #drawing foot spot dot
 
         footSpotDotOuter = pygame.Surface((12, 12), pygame.SRCALPHA)
@@ -76,15 +89,16 @@ class Board:
 
         balls = self.constructBalls()
         self.positionBalls(balls)
-        self.initDisplay(screen, balls)
+        self.pb(balls, space)
+
+        # self.initDisplay(screen, balls)
 
         t = TextInput()
         t.set_text_color((0, 0, 255))
-        pygame.draw.rect(backgroundDuo, (255, 255, 255), (0,0, 200, 200), 5)
+        # pygame.draw.rect(backgroundDuo, (255, 255, 255), (0,0, 200, 200), 5)
         # backgroundDuo.blit(t.get_surface(), (0, 0))
 
 
-        pygame.display.flip()
 
         clock = pygame.time.Clock()
         while True:
@@ -92,10 +106,11 @@ class Board:
             for event in events:
                 if event.type == pygame.QUIT:
                     exit()
-            if t.update(events):
-                print(t.get_text())
-            screen.blit(t.get_surface(), (800, 0))
-            pygame.display.update()
+            space.step(1/60.0)
+            screen.fill((10, 108, 3))
+            #background.fill((10, 108, 3))
+            space.debug_draw(draw_options)
+            pygame.display.flip()
             clock.tick(60)
 
     def constructBalls(self):
@@ -118,6 +133,15 @@ class Board:
                 balls[i].loc = TRIANGLE_COORDS[ind]
                 possible.remove(ind)
         return balls
+    def pb(self, balls, space):
+        for ball in balls:
+            mass = 1
+            radius = BALL_RADIUS
+            moment = pymunk.moment_for_circle(mass, 0, radius)
+            body = pymunk.Body(mass, moment)
+            body.position = ball.loc
+            shape = pymunk.Circle(body, radius)
+            space.add(body, shape)
     def initDisplay(self, screen, balls):
         for ball in balls:
             print("putting ball ", ball.num, " in loc " , ball.loc)
