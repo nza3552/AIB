@@ -22,7 +22,7 @@ class Pocket:
         self.body.position = loc
         self.body.angle = rot
         self.shape = pymunk.Poly(self.body, ((0,0), (50,0), (50,50), (0,50)))
-        self.shape.color = (10,10,10,255)
+        self.shape.color = (10, 10, 10, 255)
         self.shape.collision_type = 11
         self.shape.filter = pymunk.ShapeFilter(categories=4, mask=4)
         space.add(self.body, self.shape)
