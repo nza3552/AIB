@@ -66,7 +66,7 @@ class Pool:
         self.angler.filter = pymunk.ShapeFilter(categories=2, mask=2)
         self.table.space.add(self.angler, self.anglerBody)
 
-    def main(self):
+    def play(self):
 
         collHand = self.table.space.add_collision_handler(10, 11)
         collHand.begin = self.callback
@@ -204,5 +204,5 @@ def doFriction(ball): #cheap version of friction
         ball.frictionCounter = 0
     ball.body.velocity = pymunk.Vec2d(velX, velY)
 
-p = Pool()
-Pool.main(p)
+# p = Pool()
+# Pool.main(p)
