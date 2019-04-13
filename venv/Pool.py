@@ -14,6 +14,26 @@ from Table import Table
 from Ball import Ball
 import csv
 
+import math
+import random
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+from collections import namedtuple
+from itertools import count
+from PIL import Image
+
+import torch
+import torch.utils.data
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+import torchvision.transforms as T
+
+from Player import Player
+
+import threading
+
 STATE_FILE = "state.txt"
 
 BALL_RADIUS = 11.5
@@ -34,22 +54,39 @@ TRIANGLE_COORDS = [FOOT_SPOT,
                    (FOOT_SPOT[0] + BALL_RADIUS * 4, FOOT_SPOT[1] + BALL_RADIUS * 2),
                    (FOOT_SPOT[0] + BALL_RADIUS * 4, FOOT_SPOT[1] + -BALL_RADIUS),
                    (FOOT_SPOT[0] + BALL_RADIUS * 4, FOOT_SPOT[1] + -BALL_RADIUS * 2)]
+# BALL_INFO = [ ##############uncomment for original colors
+#     (1, (255, 255, 0), False),
+#     (2, (0, 0, 255), False),
+#     (3, (255, 0, 0), False),
+#     (4, (138, 43, 226), False),
+#     (5, (255, 69, 0), False),
+#     (6, (0, 128, 0), False),
+#     (7, (128, 0, 0), False),
+#     (8, (0, 0, 0), False),
+#     (9, (255, 255, 0), True),
+#     (10, (0, 0, 255), True),
+#     (11, (255, 0, 0), True),
+#     (12, (138, 43, 226), True),
+#     (13, (255, 69, 0), True),
+#     (14, (0, 128, 0), True),
+#     (15, (128, 0, 0), True),
+#     (16, (255, 255, 255), False)]
 BALL_INFO = [
-    (1, (255, 255, 0), False),
-    (2, (0, 0, 255), False),
+    (1, (255, 0, 0), False),
+    (2, (255, 0, 0), False),
     (3, (255, 0, 0), False),
-    (4, (138, 43, 226), False),
-    (5, (255, 69, 0), False),
-    (6, (0, 128, 0), False),
-    (7, (128, 0, 0), False),
+    (4, (255, 0, 0), False),
+    (5, (255, 0, 0), False),
+    (6, (255, 0, 0), False),
+    (7, (255, 0, 0), False),
     (8, (0, 0, 0), False),
-    (9, (255, 255, 0), True),
+    (9, (0, 0, 255), True),
     (10, (0, 0, 255), True),
-    (11, (255, 0, 0), True),
-    (12, (138, 43, 226), True),
-    (13, (255, 69, 0), True),
-    (14, (0, 128, 0), True),
-    (15, (128, 0, 0), True),
+    (11, (0, 0, 255), True),
+    (12, (0, 0, 255), True),
+    (13, (0, 0, 255), True),
+    (14, (0, 0, 255), True),
+    (15, (0, 0, 255), True),
     (16, (255, 255, 255), False)]
 
 
@@ -58,23 +95,24 @@ class Pool:
         self.sunkBalls = []
         self.points = 0
         self.table = Table()
-        self.ready = True
+        self.ready = False
         self.balls = self.addBalls()
         self.writeState(STATE_FILE)
-        self.anglerBody = pymunk.Body(0, math.inf, 1)
-        self.angler = pymunk.Segment(self.anglerBody, (2000,2000), (2001, 2001), 1)
-        self.angler.filter = pymunk.ShapeFilter(categories=2, mask=2)
-        self.table.space.add(self.angler, self.anglerBody)
+        self.player = Player(self)
+        # self.anglerBody = pymunk.Body(0, math.inf, 1)
+        # self.angler = pymunk.Segment(self.anglerBody, (2000,2000), (2001, 2001), 1)
+        # self.angler.filter = pymunk.ShapeFilter(categories=2, mask=2)
+        # self.table.space.add(self.angler, self.anglerBody)
 
     def play(self):
 
         collHand = self.table.space.add_collision_handler(10, 11)
         collHand.begin = self.callback
-
+        thread1 = threading.Thread(target=self.player.startMachine)
+        thread1.start()
         while(True):
             #check for input from a file?
             #maybe see if you can throw an event from a seaparte program
-
             self.table.display()
 
             events = pygame.event.get()
@@ -102,21 +140,18 @@ class Pool:
             for b in self.balls:
                 doFriction(b) #this needs to apply to every ball
             self.ready = self.checkDone()
-            if self.ready:
-                self.writeState(STATE_FILE)
-            self.adjustAngler()
+            # self.adjustAngler()
 
             options = pymunk.pygame_util.DrawOptions(self.table.screen)
             self.table.space.debug_draw(options)
             pygame.display.update()
-            self.table.space.step(2.0/60.0)
+            self.table.space.step(1.0/60.0)
             self.table.clock.tick(60)
-
-    def adjustAngler(self):
-        self.anglerBody.position = self.balls[15].body.position
-        self.angler.unsafe_set_endpoints(self.balls[15].body.world_to_local(self.balls[15].body.position),
-                                         (self.balls[15].body.world_to_local(self.balls[15].body.position).x, 20))
-        self.angler.body.angle = -math.radians(-int(self.table.angle))-math.pi/2
+    # def adjustAngler(self):
+    #     self.anglerBody.position = self.balls[15].body.position
+    #     self.angler.unsafe_set_endpoints(self.balls[15].body.world_to_local(self.balls[15].body.position),
+    #                                      (self.balls[15].body.world_to_local(self.balls[15].body.position).x, 20))
+    #     self.angler.body.angle = -math.radians(-int(self.table.angle))-math.pi/2
 
     def callback(self, arbiter, space, data):
         ball = arbiter.shapes[0]
@@ -159,7 +194,8 @@ class Pool:
             possible.remove(index)
             ball = Ball(BALL_INFO[index][0], BALL_INFO[index][1], BALL_INFO[index][2])
             balls.append(ball)
-            ball.place(selfy.table.space, TRIANGLE_COORDS[i])
+            # ball.place(selfy.table.space, TRIANGLE_COORDS[i]) #CHANGE THIS BACK FOR TRIANGLE START
+            ball.place(selfy.table.space, (random.randint(25, 800), random.randint(25, 400)))
 
         #eight ball
         ball = Ball(BALL_INFO[7][0], BALL_INFO[7][1], BALL_INFO[7][2])
@@ -188,6 +224,16 @@ class Pool:
             f.write(nl)
         # print("writing")
 
+    def getState(self):
+        s = []
+        for b in self.balls:
+            if b.striped:
+                strip = 1
+            else:
+                strip = 0
+            t = [torch.tensor(b.num), torch.tensor(strip), torch.tensor(b.body.position.x), torch.tensor(b.body.position.y)]
+            s.append(t)
+        return torch.tensor([s])
 
 
 
@@ -204,5 +250,9 @@ def doFriction(ball): #cheap version of friction
         ball.frictionCounter = 0
     ball.body.velocity = pymunk.Vec2d(velX, velY)
 
-# p = Pool()
-# Pool.main(p)
+
+def main():
+    p = Pool()
+    p.play()
+
+main()
