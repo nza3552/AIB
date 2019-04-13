@@ -21,20 +21,20 @@ class AI(nn.Module):
         super(AI, self).__init__()
 
         self.number_of_actions = 2
-        self.gamma = 0.99
+        self.gamma = 0.99# i dont' use any of these yet...?
         self.final_epsilon = 0.0001
         self.initial_epsilon = 0.1
         self.number_of_iterations = 2000000
         self.replay_memory_size = 10000
         self.minibatch_size = 32
 
-        self.conv1 = nn.Conv1d(16, 32, 1, 1)
+        self.conv1 = nn.Conv1d(450, 225, 426)
         self.relu1 = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(32, 1, 2, 2)
+        self.conv2 = nn.Conv1d(225, 100, 201)
         self.relu2 = nn.ReLU(inplace=True)
-        self.conv3 = nn.Conv2d(64, 64, 4, 4)
-        self.relu3 = nn.ReLU(inplace=True)
-        self.fc4 = nn.Linear(3136, 512)
+        # self.conv3 = nn.Conv1d(100, 64, 4, 4)
+        # self.relu3 = nn.ReLU(inplace=True)
+        self.fc4 = nn.Linear(90000, 512)
         self.relu4 = nn.ReLU(inplace=True)
         self.fc5 = nn.Linear(512, self.number_of_actions)
 
@@ -43,9 +43,9 @@ class AI(nn.Module):
         out = self.relu1(out)
         out = self.conv2(out)
         out = self.relu2(out)
-        out = self.conv3(out)
-        out = self.relu3(out)
-        out = out.view(out.size()[0], -1)
+        # out = self.conv3(out)
+        # out = self.relu3(out)
+        out = out.view(1, -1)
         out = self.fc4(out)
         out = self.relu4(out)
         out = self.fc5(out)
